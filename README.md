@@ -4,9 +4,6 @@ The project's purpose is for the complete remote control of a machine via Discor
 Currently running only on Linux machines.
 
 ## Installation
-
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
-
 ```bash
 pip install -r requirements.txt
 ```
