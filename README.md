@@ -3,6 +3,9 @@
 The project's purpose is for the complete remote control of a machine via Discord messages.
 Currently running only on Linux machines.
 
+## Requirements
+Python +v3.x
+
 ## Installation
 ```bash
 pip install -r requirements.txt
