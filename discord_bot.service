@@ -1,0 +1,13 @@
+[Unit]
+Description=Discord bot C&C
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+User=<user>
+Group=<group>
+ExecStart=/usr/bin/python3 /<path_to_file>/run_bot.py
+
+[Install]
+WantedBy=multi-user.target
