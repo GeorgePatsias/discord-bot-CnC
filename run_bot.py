@@ -1,14 +1,18 @@
 # REFERENCE: https://www.gngrninja.com/code/2017/3/24/python-create-discord-bot-on-raspberry-pi
 
+import os
+import signal
 import discord
 import subprocess
+from Ngrok import Ngrok
 from Logger import logger
-from pyngrok import ngrok
-from config import BOT_TOKEN, NGROK_TOKEN
+from config import BOT_TOKEN
+
+ngrok = Ngrok()
+error = "\n:strawberry:Raspberry:\n{}\n"
 
 
-class MyClient(discord.Client):
-
+class DiscordClient(discord.Client):
     async def on_ready(self):
         logger.info(f'[SUCCESS]: Connected as {self.user}')
 
@@ -18,80 +22,64 @@ class MyClient(discord.Client):
         if message.author == self.user:
             return
 
-        messageContent = message.content
-        if not messageContent:
+        command = message.content
+        if not command:
             return
 
-        if messageContent.startswith('bot help'):
+        if command.startswith('bot help'):
             try:
-                output = """
+                await message.channel.send("""
                 Commands:
                 - Any linux command (Restricted to 2000 lines)
                 - ngrok <port> <protocol> (Starts tunnel)
                 - get ngrok (Shows all tunnels)
                 - delete ngrok (Deletes all tunnels)
-                """
-
-                await message.channel.send(output)
+                """)
                 return
 
             except Exception as e:
-                logger.exception(e)
-                await message.channel.send(f"\n:strawberry:Raspberry:\n{e}\n")
+                await message.channel.send(error.format(e))
                 return
 
-        if messageContent.startswith('ngrok'):
-            try:
-                ngrok.set_auth_token(NGROK_TOKEN)
-                ngrok_tunnel = ngrok.connect(messageContent.split()[1], messageContent.split()[2])
+        if command.startswith('ngrok'):
+            response = ngrok.start_tunnel(command)
+            await message.channel.send(response)
+            return
 
-                await message.channel.send(ngrok_tunnel)
-                return
+        if command.startswith('get ngrok'):
+            response = ngrok.get_tunnels()
+            await message.channel.send(response)
+            return
 
-            except Exception as e:
-                logger.exception(e)
-                await message.channel.send(f"\n:strawberry:Raspberry:\n{e}\n")
-                return
-
-        if messageContent.startswith('get ngrok'):
-            try:
-                ngrok.set_auth_token(NGROK_TOKEN)
-                tunnels = ngrok.get_tunnels()
-                await message.channel.send(str(tunnels))
-                return
-
-            except Exception as e:
-                logger.exception(e)
-                await message.channel.send(f"\n:strawberry:Raspberry:\n{e}\n")
-                return
-
-        if messageContent.startswith('delete ngrok'):
-            try:
-                ngrok.set_auth_token(NGROK_TOKEN)
-                tunnels = ngrok.get_tunnels()
-
-                for tunnel in tunnels:
-                    ngrok.disconnect(tunnel.public_url)
-
-                await message.channel.send("Ngrok deleted all tunnels!")
-                return
-
-            except Exception as e:
-                logger.exception(e)
-                await message.channel.send(f"\n:strawberry:Raspberry:\n{e}\n")
-                return
+        if command.startswith('delete ngrok'):
+            response = ngrok.delete_tunnels()
+            await message.channel.send(response)
+            return
 
         try:
-            output = subprocess.check_output(messageContent, shell=True, encoding='utf-8')
-            await message.channel.send(f"\n:strawberry:Raspberry:\n{output}\n")
+            output = subprocess.Popen(
+                command.split(),
+                stdout=subprocess.PIPE,
+                cwd=os.getcwd(),
+                bufsize=-1,
+                encoding='utf-8'
+            )
+
+            for line in iter(output.stdout.readline, b''):
+                try:
+                    await message.channel.send(line)
+                except:
+                    pass
+
+            return
 
         except Exception as e:
             logger.exception(e)
-            await message.channel.send(f"\n:strawberry:Raspberry:\n{e}\n")
+            await message.channel.send(error.format(e))
 
             return
 
 
 if __name__ == "__main__":
-    client = MyClient()
+    client = DiscordClient()
     client.run(BOT_TOKEN)
